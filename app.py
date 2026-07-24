@@ -55,6 +55,20 @@ def carregar_dados(_versao_arquivo):
     ali = pd.read_excel(ARQUIVO, sheet_name="TB55_Alienacoes")
 
     cons["AREA_MAX"] = pd.to_numeric(cons["AREA_MAX"], errors="coerce")
+
+    # Compatibilidade com versões anteriores da planilha: se a situação
+    # vigente ainda não existir no arquivo, deriva aqui com a regra oficial
+    # (prioridade para a triagem PPR; sem triagem, vale a base cartográfica).
+    if "SITUACAO_VIGENTE" not in cons.columns:
+        ppr = cons["PPR_Situação"].where(cons["PPR_Situação"].notna())
+        ppr = ppr.astype("string").str.replace(r"\s+", " ", regex=True).str.strip()
+        base = cons["SITUACAO"].where(cons["SITUACAO"].notna())
+        base = base.astype("string").str.replace(r"\s+", " ", regex=True).str.strip()
+        cons["SITUACAO_VIGENTE"] = ppr.fillna(base)
+        fonte = pd.Series("Sem informação", index=cons.index)
+        fonte[base.notna()] = "Base cartográfica"
+        fonte[ppr.notna()] = "Triagem PPR"
+        cons["SITUACAO_FONTE"] = fonte
     for c in ("TB55_DT_REGISTRO", "TB55_DT_ULT_OBSERVACAO", "TB55_DT_ULT_ALIENACAO"):
         cons[c] = pd.to_datetime(cons[c], errors="coerce")
     obs["DT_OBSERVACAO"] = pd.to_datetime(obs["DT_OBSERVACAO"], errors="coerce")
@@ -63,6 +77,18 @@ def carregar_dados(_versao_arquivo):
 
 
 cons, obs, proc, ali = carregar_dados(os.path.getmtime(ARQUIVO))
+
+ESSENCIAIS = ["CD_IMOVEL", "ENDERECO", "REGADMIN", "AREA_MAX", "SITUACAO",
+              "EM_PPR", "EM_TB55", "PPR_Situação", "PPR_Responsável",
+              "TB55_VL_AVALIACAO_RECENTE", "TB55_QT_ALIENACOES"]
+faltando = [c for c in ESSENCIAIS if c not in cons.columns]
+if faltando:
+    st.error(
+        "O arquivo Imoveis_consolidado.xlsx carregado não tem as colunas: "
+        + ", ".join(faltando)
+        + ". Substitua-o pela versão mais recente gerada pela rotina de consolidação."
+    )
+    st.stop()
 
 # ----------------------------------------------------------------------------
 # Barra lateral — filtros
@@ -222,6 +248,12 @@ with tab_tabela:
         ],
         "Todas as colunas": list(cons.columns),
     }
+    # mantém apenas colunas existentes no arquivo; oculta conjuntos esvaziados
+    CONJUNTOS = {
+        k: [c for c in v if c in cons.columns]
+        for k, v in CONJUNTOS.items()
+    }
+    CONJUNTOS = {k: v for k, v in CONJUNTOS.items() if len(v) > 3}
     esc1, esc2 = st.columns([1, 2])
     conjunto = esc1.selectbox("Conjunto de colunas", list(CONJUNTOS.keys()))
     extras = esc2.multiselect(
