@@ -79,7 +79,11 @@ with st.sidebar:
     )
 
     f_ra = st.multiselect("Região administrativa", sorted(cons["REGADMIN"].dropna().unique()))
-    f_sit = st.multiselect("Situação do lote", sorted(cons["SITUACAO"].dropna().unique()))
+    f_sit = st.multiselect(
+        "Situação do lote",
+        sorted(cons["SITUACAO_VIGENTE"].dropna().unique()),
+        help="Prioriza a situação apurada na triagem PPR; sem triagem, vale a base cartográfica.",
+    )
     f_resp = st.multiselect("Responsável (triagem PPR)", sorted(cons["PPR_Responsável"].dropna().unique()))
 
     f_dados = st.radio(
@@ -110,7 +114,7 @@ if busca.strip():
 if f_ra:
     df = df[df["REGADMIN"].isin(f_ra)]
 if f_sit:
-    df = df[df["SITUACAO"].isin(f_sit)]
+    df = df[df["SITUACAO_VIGENTE"].isin(f_sit)]
 if f_resp:
     df = df[df["PPR_Responsável"].isin(f_resp)]
 if f_dados == "Com triagem PPR e histórico TB55":
@@ -152,7 +156,7 @@ with tab_geral:
             fig.update_layout(yaxis_title="", xaxis_title="", height=460, margin=dict(l=10, r=10, t=50, b=10))
             st.plotly_chart(fig, width="stretch")
         with e2:
-            por_sit = df["SITUACAO"].fillna("NÃO INFORMADA").value_counts().reset_index()
+            por_sit = df["SITUACAO_VIGENTE"].fillna("NÃO INFORMADA").value_counts().reset_index()
             por_sit.columns = ["Situação", "Imóveis"]
             fig = px.bar(
                 por_sit, x="Situação", y="Imóveis",
@@ -190,7 +194,7 @@ with tab_geral:
 with tab_tabela:
     CONJUNTOS = {
         "Visão essencial": [
-            "CD_IMOVEL", "ENDERECO", "REGADMIN", "AREA_MAX", "SITUACAO", "STATUS",
+            "CD_IMOVEL", "ENDERECO", "REGADMIN", "AREA_MAX", "SITUACAO_VIGENTE", "SITUACAO_FONTE", "STATUS",
             "EM_PPR", "PPR_Responsável", "TB55_VL_AVALIACAO_RECENTE",
             "TB55_QT_ALIENACOES", "TB55_DT_ULT_OBSERVACAO",
         ],
@@ -210,6 +214,11 @@ with tab_tabela:
             "TB55_DT_REGISTRO", "TB55_QT_OBSERVACOES", "TB55_DT_ULT_OBSERVACAO",
             "TB55_ULT_OBSERVACAO", "TB55_QT_PROCESSOS", "TB55_PROCESSOS",
             "TB55_QT_ALIENACOES", "TB55_ULT_ALIENACAO_MODALIDADE", "TB55_ULT_ALIENACAO_SITUACAO",
+        ],
+        "Parâmetros LUOS": [
+            "CD_IMOVEL", "ENDERECO", "REGADMIN", "LUOS_MATCH_STATUS", "LUOS_CODIGO",
+            "LUOS_UOS_DETALHE", "LUOS_CFA_BASICO", "LUOS_CFA_MAXIMO", "LUOS_TX_OCUP",
+            "LUOS_TX_PERM", "LUOS_ALT_MAX", "LUOS_AREA_LOTE_M2", "LUOS_CANDIDATOS",
         ],
         "Todas as colunas": list(cons.columns),
     }
@@ -280,7 +289,7 @@ with tab_ficha:
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Área máxima (m²)", br_num(im["AREA_MAX"]))
         m2.metric("Avaliação recente (R$)", br_num(im["TB55_VL_AVALIACAO_RECENTE"]))
-        m3.metric("Situação", txt(im["SITUACAO"]))
+        m3.metric("Situação (vigente)", txt(im["SITUACAO_VIGENTE"]))
         m4.metric("Alienações no histórico", br_num(im["TB55_QT_ALIENACOES"]))
 
         if im["EM_PPR"] == "Não":
@@ -298,6 +307,7 @@ with tab_ficha:
 |---|---|
 | Condição | {txt(im['CD_DS_COND'])} |
 | Status | {txt(im['STATUS'])} |
+| Situação na base | {txt(im['SITUACAO'])} |
 | Ocupação · % | {txt(im['OCUPACAO'])} · {br_num(im['PERCENTUAL'])}% |
 | Forma · posição | {txt(im['FORMA_IMOV'])} · {txt(im['POSICAO'])} |
 | Projeto / planta | {txt(im['IMU_PLAN_L'])} · dec. {txt(im['PLANTA_DEC'])} |
