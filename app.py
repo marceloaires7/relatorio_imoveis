@@ -49,9 +49,20 @@ def txt(v):
 def carregar_dados(_versao_arquivo):
     """O parâmetro _versao_arquivo (data de modificação do xlsx) faz o cache
     ser renovado automaticamente quando a planilha for substituída."""
-    cons = pd.read_excel(ARQUIVO, sheet_name="Consolidado")
+    # Números de processo são identificadores, não grandezas: sem dtype=str o
+    # pandas os converte para float64 e destrói zeros à esquerda e dígitos
+    # finais (o CNJ tem 20 dígitos; float64 guarda no máximo ~17).
+    cons = pd.read_excel(
+        ARQUIVO,
+        sheet_name="Consolidado",
+        dtype={"TB55_PROCESSOS": str, "TB55_PROCESSOS_ADM": str, "TB55_PROCESSO_CD": str},
+    )
     obs = pd.read_excel(ARQUIVO, sheet_name="TB55_Observacoes")
-    proc = pd.read_excel(ARQUIVO, sheet_name="TB55_Processos")
+    proc = pd.read_excel(
+        ARQUIVO,
+        sheet_name="TB55_Processos",
+        dtype={"NUM_PROCESSO": str, "NUM_PROCESSO_ADM": str},
+    )
     ali = pd.read_excel(ARQUIVO, sheet_name="TB55_Alienacoes")
 
     cons["AREA_MAX"] = pd.to_numeric(cons["AREA_MAX"], errors="coerce")
