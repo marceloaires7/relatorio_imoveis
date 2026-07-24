@@ -1,0 +1,25 @@
+# Ambientes Virtuais (Virtual Environments)
+.venv/
+venv/
+ENV/
+env/
+# Python / Pycache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+# Variáveis de ambiente e segredos
+.env
+.env.local
+.streamlit/secrets.toml
+# Logs e arquivos temporários
+*.log
+*.tmp
+# Arquivos de IDEs / Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
